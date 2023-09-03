@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Table } from '@finos/perspective';
+import { Table, TableData } from '@finos/perspective';
 import { ServerRespond } from './DataStreamer';
 import { DataManipulator } from './DataManipulator';
 import './Graph.css';
@@ -18,15 +18,22 @@ class Graph extends Component<IProps, {}> {
     return React.createElement('perspective-viewer');
   }
 
+  // The componentDidMount() method runs after the component output has been rendered to the DOM.
   componentDidMount() {
     // Get element from the DOM.
     const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
 
+    // The schema object configures the Perspective table view of our graph.
+    // Updated to include upper_bound, lower_bound and trigger_alert
     const schema = {
-      stock: 'string',
-      top_ask_price: 'float',
-      top_bid_price: 'float',
+      // We no longer want to distinguish between two stocks now
+      price_abc: 'float',
+      price_def: 'float',
+      ratio: 'float',
       timestamp: 'date',
+      upper_bound: 'float',
+      lower_bound: 'float',
+      trigger_alert: 'float',
     };
 
     if (window.perspective && window.perspective.worker()) {
@@ -36,22 +43,27 @@ class Graph extends Component<IProps, {}> {
       // Load the `table` in the `<perspective-viewer>` DOM reference.
       elem.load(this.table);
       elem.setAttribute('view', 'y_line');
-      elem.setAttribute('column-pivots', '["stock"]');
       elem.setAttribute('row-pivots', '["timestamp"]');
-      elem.setAttribute('columns', '["top_ask_price"]');
+      // elem.setAttribute('column-pivots', '["stock"]'); // We’re concerned about the ratios between the two stocks, not their separate prices
+      elem.setAttribute('columns', '["ratio", "upper_bound", "lower_bound", "trigger_alert"]'); // Decides what to display
       elem.setAttribute('aggregates', JSON.stringify({
-        stock: 'distinctcount',
-        top_ask_price: 'avg',
-        top_bid_price: 'avg',
+        price_abc: 'avg',
+        price_def: 'avg',
+        ratio: 'avg',
+        // stock: 'distinctcount',
+        // top_ask_price: 'avg',
+        // top_bid_price: 'avg',
         timestamp: 'distinct count',
+        upper_bound: 'avg',
+        lower_bound: 'avg',
+        trigger_alert: 'avg',
       }));
     }
   }
 
   componentDidUpdate() {
     if (this.table) {
-      this.table.update(
-        DataManipulator.generateRow(this.props.data),
+      this.table.update([DataManipulator.generateRow(this.props.data),] as unknown as TableData
       );
     }
   }
